@@ -11,6 +11,7 @@ from typing import Any
 class WhatsAppIntent(str, Enum):
     COUNT_BY_AUTHOR = "count_by_author"
     LIST_BY_AUTHOR = "list_by_author"
+    FOLLOW_UP_LIST = "follow_up_list"
     UNKNOWN = "unknown"
 
 
@@ -59,11 +60,36 @@ _LIST_PATTERNS = [
     ),
 ]
 
+_FOLLOW_UP_PATTERNS = [
+    re.compile(r"^(?:cuales?\s+son|y\s+cuales|mostrame?las?|listalas?|decime?\s+cuales?)$", re.IGNORECASE),
+    re.compile(r"^(?:mostrame?|dame|quiero\s+ver)\s+(?:las?\s+)?(?:frases?)$", re.IGNORECASE),
+]
 
-def parse_whatsapp_message(body: str) -> ParsedWhatsAppMessage:
+# Session store: recuerda el ultimo autor consultado por telefono
+_sessions: dict[str, str] = {}
+
+
+def get_last_author(from_phone: str) -> str | None:
+    return _sessions.get(from_phone)
+
+
+def set_last_author(from_phone: str, author: str) -> None:
+    _sessions[from_phone] = author
+
+
+def parse_whatsapp_message(body: str, from_phone: str = "") -> ParsedWhatsAppMessage:
     normalized = " ".join(body.strip().lower().split())
     if not normalized:
         return ParsedWhatsAppMessage(intent=WhatsAppIntent.UNKNOWN, author_query=None)
+
+    for pattern in _FOLLOW_UP_PATTERNS:
+        if pattern.match(normalized):
+            last = _sessions.get(from_phone)
+            if last:
+                return ParsedWhatsAppMessage(
+                    intent=WhatsAppIntent.FOLLOW_UP_LIST,
+                    author_query=last,
+                )
 
     for pattern in _COUNT_PATTERNS:
         m = pattern.match(normalized)

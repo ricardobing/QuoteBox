@@ -23,6 +23,7 @@ from app.services.whatsapp import (
     build_unknown_author_response,
     build_unknown_intent_response,
     parse_whatsapp_message,
+    set_last_author,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,12 +52,14 @@ async def whatsapp_webhook(request: Request) -> Response:
             logger.warning("Firma Twilio invalida para request desde %s (url=%s)", from_phone, url)
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Twilio signature")
 
-    parsed = parse_whatsapp_message(str(body))
+    parsed = parse_whatsapp_message(str(body), str(from_phone))
     logger.info("WhatsApp: from=%s intent=%s author=%s", from_phone, parsed.intent.value, parsed.author_query)
 
     if parsed.intent == WhatsAppIntent.COUNT_BY_AUTHOR and parsed.author_query:
         count = count_quotes_by_author(supabase, parsed.author_query)
         reply = build_count_response(parsed.author_query, count)
+        if count > 0:
+            set_last_author(str(from_phone), parsed.author_query)
         if count == 0:
             try:
                 register_unknown_author_request(supabase, parsed.author_query, str(from_phone))
@@ -64,11 +67,12 @@ async def whatsapp_webhook(request: Request) -> Response:
             except Exception:
                 logger.exception("Error registrando unknown author request.")
 
-    elif parsed.intent == WhatsAppIntent.LIST_BY_AUTHOR and parsed.author_query:
+    elif parsed.intent in (WhatsAppIntent.LIST_BY_AUTHOR, WhatsAppIntent.FOLLOW_UP_LIST) and parsed.author_query:
         quotes = list_quotes_by_author(supabase, parsed.author_query, limit=50)
         total = count_quotes_by_author(supabase, parsed.author_query)
         if quotes:
             reply = build_list_response(parsed.author_query, quotes, total)
+            set_last_author(str(from_phone), parsed.author_query)
         else:
             reply = build_unknown_author_response(parsed.author_query)
             try:
