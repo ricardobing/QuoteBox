@@ -47,3 +47,4 @@ jobs.sqlite
 
 # Streamlit
 .streamlit/secrets.toml
+admin/.streamlit/secrets.toml
