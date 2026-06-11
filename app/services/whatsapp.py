@@ -20,17 +20,43 @@ class ParsedWhatsAppMessage:
     author_query: str | None
 
 
+def clean_author_query(raw: str) -> str:
+    result = raw.strip().lower()
+    result = re.sub(r"^[¿¡\s]+|[?!.,;:\s]+$", "", result)
+    prepositions = ["de ", "del ", "en ", "a ", "al ", "sobre ", "para "]
+    for prep in prepositions:
+        if result.startswith(prep):
+            result = result[len(prep):]
+            break
+    result = result.strip()
+    return result if result else raw.strip()
+
+
 _COUNT_PATTERNS = [
-    re.compile(r"cu[a\u00e1]ntas?\s+frases?\s+(?:hay\s+)?(?:de\s+)?(.+)", re.IGNORECASE),
-    re.compile(r"cu[a\u00e1]ntas?\s+(?:tiene|ten[e\u00e9]s|hay)\s+(.+)", re.IGNORECASE),
+    re.compile(
+        r"cu[a\u00e1]ntas?\s+frases?\s+(?:hay\s+)?(?:tiene\s+)?(?:de\s+|en\s+|sobre\s+)?(.+)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"cu[a\u00e1]ntas?\s+(?:tiene|ten[e\u00e9]s|hay)\s+(.+)",
+        re.IGNORECASE,
+    ),
 ]
 
 _LIST_PATTERNS = [
     re.compile(
-        r"(?:cu[a\u00e1]les?\s+son|dame|mostrame|lista\s+de)\s+(?:las?\s+)?(?:frases?\s+)?(?:de\s+)?(.+)",
+        r"(?:cu[a\u00e1]les?\s+son|dame|mostrame|quiero|ver|lista\s+de)\s+"
+        r"(?:las?\s+)?(?:frases?\s+)?(?:de\s+|en\s+)?(.+)",
         re.IGNORECASE,
     ),
-    re.compile(r"frases?\s+de\s+(.+)", re.IGNORECASE),
+    re.compile(
+        r"(?:frases?\s+|que\s+frases?\s+hay\s+)(?:de\s+|en\s+)?(.+)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^([a-z\u00e1\u00e9\u00ed\u00f3\u00fa\.\-]+(\s+[a-z\u00e1\u00e9\u00ed\u00f3\u00fa\.\-]+){0,1})$",
+        re.IGNORECASE,
+    ),
 ]
 
 
@@ -42,17 +68,19 @@ def parse_whatsapp_message(body: str) -> ParsedWhatsAppMessage:
     for pattern in _COUNT_PATTERNS:
         m = pattern.match(normalized)
         if m:
+            author = clean_author_query(m.group(1))
             return ParsedWhatsAppMessage(
                 intent=WhatsAppIntent.COUNT_BY_AUTHOR,
-                author_query=m.group(1).strip(),
+                author_query=author,
             )
 
     for pattern in _LIST_PATTERNS:
         m = pattern.match(normalized)
         if m:
+            author = clean_author_query(m.group(1))
             return ParsedWhatsAppMessage(
                 intent=WhatsAppIntent.LIST_BY_AUTHOR,
-                author_query=m.group(1).strip(),
+                author_query=author,
             )
 
     return ParsedWhatsAppMessage(intent=WhatsAppIntent.UNKNOWN, author_query=normalized)
