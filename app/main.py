@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from app.config import get_settings
 from app.database import get_supabase_client
+from app.routers.admin import router as admin_router
 from app.routers.health import router as health_router
 from app.routers.trigger import router as trigger_router
 from app.routers.webhooks import router as webhooks_router
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router, tags=["health"])
     app.include_router(trigger_router, tags=["trigger"])
+    app.include_router(admin_router, tags=["admin"])
     app.include_router(webhooks_router, tags=["webhooks"])
 
     def _run_scrape_pipeline() -> None:

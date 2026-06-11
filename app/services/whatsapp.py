@@ -78,7 +78,8 @@ def set_last_author(from_phone: str, author: str) -> None:
 
 
 def parse_whatsapp_message(body: str, from_phone: str = "") -> ParsedWhatsAppMessage:
-    normalized = " ".join(body.strip().lower().split())
+    normalized = re.sub(r"[?!.,;:]+", "", body.strip().lower())
+    normalized = " ".join(normalized.split())
     if not normalized:
         return ParsedWhatsAppMessage(intent=WhatsAppIntent.UNKNOWN, author_query=None)
 
