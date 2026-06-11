@@ -9,7 +9,11 @@ from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 from twilio.request_validator import RequestValidator
 
 from app.models.schemas import GenericWebhookResponse, ManualIngestWebhookPayload
-from app.services.escalation import normalize_author_query, register_unknown_author_request
+from app.services.escalation import (
+    normalize_author_query,
+    process_unknown_author_escalation,
+    register_unknown_author_request,
+)
 from app.services.quotes import count_quotes_by_author, list_quotes_by_author
 from app.services.whatsapp import (
     WhatsAppIntent,
@@ -50,6 +54,7 @@ async def whatsapp_webhook(request: Request) -> Response:
         if count == 0:
             try:
                 register_unknown_author_request(supabase, parsed.author_query, str(from_phone))
+                process_unknown_author_escalation(supabase, settings, parsed.author_query)
             except Exception:
                 logger.exception("Error registrando unknown author request.")
 
@@ -62,6 +67,7 @@ async def whatsapp_webhook(request: Request) -> Response:
             reply = build_unknown_author_response(parsed.author_query)
             try:
                 register_unknown_author_request(supabase, parsed.author_query, str(from_phone))
+                process_unknown_author_escalation(supabase, settings, parsed.author_query)
             except Exception:
                 logger.exception("Error registrando unknown author request.")
 
