@@ -48,3 +48,9 @@ jobs.sqlite
 # Streamlit
 .streamlit/secrets.toml
 admin/.streamlit/secrets.toml
+
+# Docs internos / con secretos
+docs/ENV_VARIABLES.md
+docs/handoff_implementacion.md
+docs/decisions.md
+prueba.txt
