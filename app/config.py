@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     twilio_account_sid: str = Field(alias="TWILIO_ACCOUNT_SID")
     twilio_auth_token: str = Field(alias="TWILIO_AUTH_TOKEN")
     twilio_whatsapp_from: str = Field(alias="TWILIO_WHATSAPP_FROM")
+    twilio_skip_validation: bool = Field(default=False, alias="TWILIO_SKIP_VALIDATION")
 
     # Resend
     resend_api_key: str = Field(alias="RESEND_API_KEY")
