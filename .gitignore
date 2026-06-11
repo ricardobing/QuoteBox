@@ -1,0 +1,49 @@
+# Credenciales — nunca al repo
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-log.txt
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.xml
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# APScheduler SQLite (si se usa jobstore local en dev)
+jobs.sqlite
+
+# Streamlit
+.streamlit/secrets.toml

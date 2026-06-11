@@ -1,0 +1,89 @@
+PRUEBA TÉCNICA · Archytas
+Contexto
+Trabajás en Archytas y te llega un cliente nuevo: QuoteBox, una startup que curó una biblioteca de frases
+de autores famosos y las vende como servicio. Sus clientes —equipos de marketing, coaches, creadores de
+contenido— pagan una suscripción mensual para consultar frases por temática (amor, liderazgo, humor,
+etc.) y usarlas en sus comunicaciones.
+Hoy todo es manual: alguien responde mensajes de WhatsApp a mano y agrega frases a una planilla cuando
+se acuerda. Quieren automatizar el sistema completo para poder escalar sin contratar más personas.
+El equipo te da acceso a su plataforma interna donde viven las frases:
+· Usuario: ArchytasUser · Contraseña: 123
+La plataforma es: https://quotes.toscrape.com/login
+Tu trabajo es armar el sistema completo. Nada está definido de antemano: vos investigás, decidís y
+justificás.
+Sobre herramientas y costos: todo el ejercicio se puede resolver de manera gratuita. n8n tiene versión
+self-hosted (gratis), y las plataformas de WhatsApp suelen ofrecer períodos de prueba sin necesidad de tarjeta.
+No es necesario gastar nada para entregar una demo funcional.
+Lo que tiene que hacer el sistema
+1. Scraping con login
+· Entrá a la plataforma con las credenciales del cliente.
+· Recorré las páginas (hay un botón "Next") hasta haber revisado todas.
+· Extraé las frases que coincidan con los tags monitoreados, junto con: texto de la frase, autor y lista de
+tags.
+· El cliente no monitorea un solo tag sino una lista de tags (ej. love, humor, life). El scraping tiene que
+cubrir todos los tags activos en cada corrida.
+· Esa lista tiene que poder administrarse sin tocar el código: el cliente puede agregar tags, quitarlos o
+pausarlos desde alguna interfaz (elegís cuál).
+· Las credenciales de acceso no pueden estar hardcodeadas. Usá el mecanismo que consideres correcto
+y explicá cuál elegiste y por qué.
+2. Storage
+· Guardá los datos extraídos de forma estructurada.
+· Elegís dónde y cómo. Justificá tu elección en el documento de decisiones.
+· El sistema tiene que ser idempotente: correr el scraping dos veces con los mismos datos no puede
+generar duplicados.
+3. Detección de novedades con n8n
+Armá el flujo desde cero. Tiene que:
+· Comparar las frases scrapeadas contra lo que ya está guardado.
+· Si hay frases nuevas → mandar un solo mail de resumen con las novedades agrupadas por tag. No un
+mail por frase ni un mail por tag.
+· Si no hay novedades → no hacer nada.
+El cliente también tiene que poder eliminar o desactivar frases desde alguna interfaz visual (elegís cuál). El
+comportamiento esperado:
+· Desactivada → queda desactivada, el scraping no la vuelve a traer.
+· Eliminada → si el scraping la vuelve a encontrar en la plataforma, se trata como una novedad.
+Nota: la plataforma no cambia sus datos, así que la primera vez que corra habrá novedades y las
+siguientes no. Eso está bien — lo que evaluamos es que el mecanismo de comparación esté bien
+implementado. Pensá también cómo el cliente podría disparar una nueva detección agregando un tag
+nuevo a su lista.
+4. Bot de WhatsApp (consultas)
+Los usuarios consultan frases por WhatsApp. El bot responde con datos reales del storage. Tiene que
+entender al menos:
+· ¿Cuántas frases hay de Einstein?
+· ¿Cuáles son?
+Para la integración con WhatsApp, investigá qué plataforma usar y justificá tu elección. Hay varias opciones
+con planes gratuitos o períodos de prueba. El flujo de respuesta va en n8n.
+5. Autores desconocidos y carga manual
+El bot va a recibir consultas de autores que no están en el storage. Eso pasa, y hay que manejarlo:
+· Si un usuario pregunta por un autor que no existe → el bot responde que no tiene frases de ese autor
+por ahora.
+· Esa consulta queda registrada.
+· Si el mismo autor es pedido más de una vez (por cualquier usuario), el sistema lo escala
+automáticamente a algún lado para que un humano del equipo decida si vale la pena incorporarlo. Dónde
+y cómo — lo decidís vos.
+Además, ese mismo humano tiene que poder cargar autores y frases manualmente. Cómo y desde dónde
+— lo decidís vos. Cuando el humano carga algo, el sistema lo tiene que detectar, validar e ingresar al
+storage.
+Pensá bien este flujo: hay dos fuentes de datos (scraping + carga manual), un humano en el medio, y el
+bot tiene que responder con todo consistentemente.
+Entregables
+1. Repositorio de GitHub — con el código del flow y cualquier script que hayas usado.
+2. Documento de máximo 2 carillas (PDF o MD dentro del repo) explicando:
+– Cómo pensaste el sistema y por qué tomaste cada decisión clave.
+– Cómo manejaste las credenciales y los tags configurables.
+– Qué harías diferente si esto fuera a producción con datos reales del cliente.
+3. Loom — video de hasta 5 minutos mostrando el sistema funcionando: el scraping, la detección, el bot
+respondiendo y el mail llegando. No hace falta que sea perfecto — queremos ver el flujo real.
+Criterios de evaluación
+No buscamos que todo funcione perfecto. Buscamos ver cómo pensás:
+Qué miramos Qué significa
+Criterio técnico ¿El trigger es el correcto? ¿Hay retry en las llamadas externas? ¿Los nodos
+tienen nombres que explican qué hacen?
+Gestión de secretos ¿Las credenciales están hardcodeadas o bien manejadas?
+Idempotencia ¿Re-ejecutar el scraping duplica datos?
+Manejo de errores ¿Qué pasa si algo falla? ¿Se sabe? ¿Llega una alerta o se pierde en silencio?
+Diseño del sistema ¿Pensó el flujo completo, incluyendo los casos no tan obvios?
+Decisiones justificadas ¿Por qué ese storage? ¿Por qué esa plataforma de WhatsApp?
+Claridad ¿Otro dev puede entender tu trabajo sin preguntarte nada?
+Escalabilidad ¿El sistema puede crecer? ¿Soportaría más tags, más usuarios, más volumen
+sin reescribirse?
+¿Dudas? Si algo no está claro, preguntá. Preferimos que preguntes a que asumas mal.
