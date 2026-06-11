@@ -86,18 +86,71 @@ def manual_ingest_webhook(
     payload: dict[str, Any],
     x_webhook_secret: str | None = Header(default=None, alias="X-Webhook-Secret"),
 ) -> GenericWebhookResponse:
-    settings = None
-    try:
-        from app.config import get_settings  # noqa: F811
-        settings = get_settings()
-    except Exception:
-        pass
+    from app.config import get_settings
+    from app.services.email import configure_resend, send_error_email
+    from app.services.quotes import upsert_quote_manual
 
-    if not x_webhook_secret or (settings and x_webhook_secret != settings.webhook_secret):
+    settings = get_settings()
+
+    if not x_webhook_secret or x_webhook_secret != settings.webhook_secret:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid webhook secret.",
         )
 
-    _ = payload
-    return GenericWebhookResponse(ok=True, detail="manual ingest event received")
+    record = payload.get("record", {})
+    record_id = record.get("id")
+    text = record.get("text", "")
+    author = record.get("author", "")
+    tags = record.get("tags", [])
+
+    supabase = None
+    try:
+        from app.database import get_supabase_client
+        supabase = get_supabase_client(settings)
+    except Exception as exc:
+        logger.exception("No se pudo conectar a Supabase para manual ingest")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    if not text or not author:
+        error_detail = f"Validacion fallida: text o author vacio. record_id={record_id}"
+        logger.warning(error_detail)
+        try:
+            supabase.table("manual_queue").update({
+                "status": "error",
+                "error_detail": error_detail,
+                "processed_at": "now()",
+            }).eq("id", record_id).execute()
+        except Exception:
+            logger.exception("No se pudo actualizar manual_queue como error")
+        try:
+            configure_resend(settings)
+            send_error_email(settings, "Manual ingest validation failed", error_detail)
+        except Exception:
+            logger.exception("Error enviando email de error manual ingest")
+        raise HTTPException(status_code=422, detail=error_detail)
+
+    try:
+        upsert_quote_manual(supabase, text, author, tags)
+    except Exception as exc:
+        error_detail = f"Error en upsert: {exc}"
+        logger.exception(error_detail)
+        supabase.table("manual_queue").update({
+            "status": "error",
+            "error_detail": str(exc)[:500],
+            "processed_at": "now()",
+        }).eq("id", record_id).execute()
+        try:
+            configure_resend(settings)
+            send_error_email(settings, "Manual ingest upsert failed", str(exc))
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=error_detail)
+
+    supabase.table("manual_queue").update({
+        "status": "approved",
+        "processed_at": "now()",
+    }).eq("id", record_id).execute()
+
+    logger.info("Manual quote ingested: %s (id=%s)", author, record_id)
+    return GenericWebhookResponse(ok=True, detail=f"Quote from {author} ingested")
