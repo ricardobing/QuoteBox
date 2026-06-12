@@ -81,7 +81,7 @@ def main() -> None:
 
     st.caption(f"Mostrando {len(page_quotes)} de {total} frases")
 
-    for q in page_quotes:
+    for i, q in enumerate(page_quotes):
         col1, col2, col3, col4, col5 = st.columns([3.5, 1.8, 1.3, 0.6, 0.6])
         text = q.get("text", "")
         truncated = text[:80] + "..." if len(text) > 80 else text
@@ -96,9 +96,19 @@ def main() -> None:
             supabase.table("quotes").update({"active": active}).eq("id", q["id"]).execute()
             st.rerun()
 
-        if col5.button("🗑", key=f"del_{q['id']}"):
-            if st.button(f"Confirmar eliminar {q.get('author', '')}?", key=f"confirm_{q['id']}"):
+        if col5.button("🗑", key=f"del_{q['id']}_{i}"):
+            st.session_state[f"confirm_del_{q['id']}"] = True
+            st.rerun()
+
+        if st.session_state.get(f"confirm_del_{q['id']}", False):
+            st.warning(f"Eliminar '{truncated}'?")
+            c1, c2 = st.columns(2)
+            if c1.button("Si, eliminar", key=f"yes_{q['id']}_{i}"):
                 supabase.table("quotes").delete().eq("id", q["id"]).execute()
+                del st.session_state[f"confirm_del_{q['id']}"]
+                st.rerun()
+            if c2.button("Cancelar", key=f"no_{q['id']}_{i}"):
+                del st.session_state[f"confirm_del_{q['id']}"]
                 st.rerun()
 
         st.divider()
