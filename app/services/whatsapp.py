@@ -65,6 +65,9 @@ _FOLLOW_UP_PATTERNS = [
     re.compile(r"^(?:mostrame?|dame|quiero\s+ver)\s+(?:las?\s+)?(?:frases?)$", re.IGNORECASE),
 ]
 
+# Nombres completos conocidos que NO son frases (evita falso positivo UNKNOWN)
+_FULL_NAME_KEYWORDS = {"hola", "chau", "gracias", "si", "no", "ok", "bien", "bueno"} 
+
 # Session store: recuerda el ultimo autor consultado por telefono
 _sessions: dict[str, str] = {}
 
@@ -78,7 +81,7 @@ def set_last_author(from_phone: str, author: str) -> None:
 
 
 def parse_whatsapp_message(body: str, from_phone: str = "") -> ParsedWhatsAppMessage:
-    normalized = re.sub(r"[?!.,;:]+", "", body.strip().lower())
+    normalized = re.sub(r"[?¿!.,;:]+", "", body.strip().lower())
     normalized = " ".join(normalized.split())
     if not normalized:
         return ParsedWhatsAppMessage(intent=WhatsAppIntent.UNKNOWN, author_query=None)
@@ -105,6 +108,8 @@ def parse_whatsapp_message(body: str, from_phone: str = "") -> ParsedWhatsAppMes
         m = pattern.match(normalized)
         if m:
             author = clean_author_query(m.group(1))
+            if author in _FULL_NAME_KEYWORDS:
+                continue  # "hola", "chau", etc. → no son autores
             return ParsedWhatsAppMessage(
                 intent=WhatsAppIntent.LIST_BY_AUTHOR,
                 author_query=author,
