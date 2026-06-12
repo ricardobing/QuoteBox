@@ -31,17 +31,11 @@ def require_auth() -> None:
 
 
 def fetch_all_tags(supabase: Client) -> list[str]:
-    result = supabase.table("monitored_tags").select("tag").execute()
-    tags = set()
+    result = supabase.table("monitored_tags").select("tag").eq("active", True).execute()
+    tags = []
     if result.data:
         for row in result.data:
-            tags.add(row.get("tag", "").lower())
-    # Also get tags from quotes table
-    q_result = supabase.table("quotes").select("tags").execute()
-    if q_result.data:
-        for row in q_result.data:
-            for t in row.get("tags", []):
-                tags.add(t.lower())
+            tags.append(row.get("tag", "").lower())
     return sorted(tags)
 
 
@@ -88,7 +82,7 @@ def main() -> None:
     st.caption(f"Mostrando {len(page_quotes)} de {total} frases")
 
     for q in page_quotes:
-        col1, col2, col3, col4 = st.columns([4, 2, 1.5, 0.8])
+        col1, col2, col3, col4, col5 = st.columns([3.5, 1.8, 1.3, 0.6, 0.6])
         text = q.get("text", "")
         truncated = text[:80] + "..." if len(text) > 80 else text
 
@@ -101,6 +95,11 @@ def main() -> None:
         if active != q.get("active", True):
             supabase.table("quotes").update({"active": active}).eq("id", q["id"]).execute()
             st.rerun()
+
+        if col5.button("🗑", key=f"del_{q['id']}"):
+            if st.button(f"Confirmar eliminar {q.get('author', '')}?", key=f"confirm_{q['id']}"):
+                supabase.table("quotes").delete().eq("id", q["id"]).execute()
+                st.rerun()
 
         st.divider()
 

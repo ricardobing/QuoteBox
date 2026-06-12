@@ -81,6 +81,9 @@ async def whatsapp_webhook(request: Request) -> Response:
             except Exception:
                 logger.exception("Error registrando unknown author request.")
 
+    elif parsed.intent == WhatsAppIntent.FOLLOW_UP_LIST and not parsed.author_query:
+        reply = "De que autor queres ver las frases? Ejemplo: 'frases de Einstein'"
+
     elif parsed.intent == WhatsAppIntent.UNKNOWN:
         reply = build_unknown_intent_response()
 

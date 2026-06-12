@@ -94,6 +94,11 @@ def parse_whatsapp_message(body: str, from_phone: str = "") -> ParsedWhatsAppMes
                     intent=WhatsAppIntent.FOLLOW_UP_LIST,
                     author_query=last,
                 )
+            else:
+                return ParsedWhatsAppMessage(
+                    intent=WhatsAppIntent.FOLLOW_UP_LIST,
+                    author_query=None,
+                )
 
     for pattern in _COUNT_PATTERNS:
         m = pattern.match(normalized)

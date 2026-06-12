@@ -52,3 +52,18 @@ def create_quote_manual(payload: QuoteManualCreate) -> dict[str, Any]:
         raise HTTPException(status_code=409, detail="Esta frase ya existe en el storage.")
 
     return {"ok": True, "detail": f"Frase de {payload.author} cargada.", "quote": result}
+
+
+@router.delete("/quotes/{quote_id}")
+def delete_quote(quote_id: str) -> dict[str, Any]:
+    from app.config import get_settings
+
+    settings = get_settings()
+    supabase = get_supabase_client(settings)
+
+    existing = supabase.table("quotes").select("id").eq("id", quote_id).limit(1).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Quote no encontrada.")
+
+    supabase.table("quotes").delete().eq("id", quote_id).execute()
+    return {"deleted": True}
