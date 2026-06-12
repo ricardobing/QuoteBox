@@ -42,17 +42,16 @@ async def whatsapp_webhook(request: Request) -> Response:
 
     proto = request.headers.get("x-forwarded-proto", "https")
     host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
-    url = f"{proto}://{host}/webhook/whatsapp"
+    url = f"{proto}://{host}{request.url.path}"
 
     if settings.twilio_skip_validation:
         logger.warning("TWILIO_SKIP_VALIDATION=true — firma no verificada para %s", from_phone)
     else:
         validator = RequestValidator(settings.twilio_auth_token)
-        params = {k: v for k, v in form_data.multi_items()}
-        if not validator.validate(url, params, signature):
+        if not validator.validate(url, dict(form_data), signature):
             logger.warning(
                 "Firma Twilio invalida: url=%s, sig=%s..., params=%s",
-                url, signature[:20], list(params.keys()),
+                url, signature[:20], list(dict(form_data).keys()),
             )
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Twilio signature")
 
