@@ -54,7 +54,7 @@ def trigger_scrape(request: Request) -> ScrapeResult:
 
         if ingest_result.quotes_inserted > 0:
             try:
-                grouped = _group_quotes_by_tag(crawl_result.quotes, active_tags)
+                grouped = _group_quotes_by_tag(ingest_result.new_quotes or [], active_tags)
                 send_novelty_summary_email(settings, grouped)
             except Exception:
                 logger.exception("Error enviando resumen de novedades (no bloqueante).")

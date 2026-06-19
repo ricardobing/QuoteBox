@@ -58,10 +58,9 @@ def create_app() -> FastAPI:
 
             if ingest_result.quotes_inserted > 0:
                 grouped: dict[str, list[dict]] = defaultdict(list)
-                for q in crawl_result.quotes:
-                    q_tags = set(q.tags) & active_tags
-                    for tag in q_tags:
-                        grouped[tag].append({"text": q.text, "author": q.author, "tags": q.tags})
+                for q in (ingest_result.new_quotes or []):
+                    for tag in q.get("tags", []):
+                        grouped[tag].append({"text": q.get("text",""), "author": q.get("author",""), "tags": q.get("tags",[])})
                 send_novelty_summary_email(settings, dict(grouped))
 
             logger.info(

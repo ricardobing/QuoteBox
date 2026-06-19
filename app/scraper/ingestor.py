@@ -15,12 +15,11 @@ from app.scraper.crawler import RawQuote
 logger = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class IngestResult:
-    """Métricas de una corrida de ingesta."""
-
     quotes_seen: int
     quotes_inserted: int
+    new_quotes: list = None
 
 
 def normalize_text_for_hash(text: str) -> str:
@@ -67,6 +66,7 @@ def upsert_quotes_idempotent(
         })
 
     inserted = 0
+    new_rows: list[dict] = []
     for row in rows:
         try:
             result = (
@@ -76,12 +76,13 @@ def upsert_quotes_idempotent(
             )
             if result.data:
                 inserted += len(result.data)
+                new_rows.append(row)
         except Exception as exc:
             logger.warning("Error insertando quote de %s: %s", row.get("author"), exc)
 
     logger.info("Ingesta: %d quotes filtradas de %d totales, %d nuevas insertadas.",
                 len(filtered), len(quotes), inserted)
-    return IngestResult(quotes_seen=len(quotes), quotes_inserted=inserted)
+    return IngestResult(quotes_seen=len(quotes), quotes_inserted=inserted, new_quotes=new_rows)
 
 
 def record_scrape_run(
